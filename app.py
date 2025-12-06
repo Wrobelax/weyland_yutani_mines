@@ -131,4 +131,4 @@ if st.button("Generate PDF Report"):
             file_name="report.pdf",
             mime="application/pdf"
         )
-st.success("PDF successfully generated. Click the button above to download.")
+    st.success("PDF successfully generated. Click the button above to download.")
