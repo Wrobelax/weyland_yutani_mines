@@ -27,7 +27,13 @@ def generate_full_pdf(
 
     # Save plot as PNG
     plot_path = os.path.join(out_dir, "chart.png")
-    pio.write_image(fig, plot_path, format="png", scale=2)
+
+    try:
+        png_bytes = fig.to_image(format="png", scale=2, engine="kaleido")
+        with open(plot_path, "wb") as f:
+            f.write(png_bytes)
+    except Exception as e:
+        raise RuntimeError(f"Failed to export Plotly figure to PNG: {e}")
 
     # Add total stats
     total_stats = stats_df.loc["Total"]
