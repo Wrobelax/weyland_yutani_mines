@@ -124,4 +124,11 @@ if st.button("Generate PDF Report"):
         selected_mines=selected_mines,
         fig=fig
     )
-    st.success(f"PDF generated: {file_path}")
+    with open(file_path, "rb") as f:
+        st.download_button(
+            label="Download PDF",
+            data=f,
+            file_name="report.pdf",
+            mime="application/pdf"
+        )
+st.success("PDF successfully generated. Click the button above to download.")
