@@ -4,21 +4,34 @@ Script used for generating PDF report from dashboard.
 
 import os
 import pandas as pd
-import plotly.io as pio
+import matplotlib.pyplot as plt
 from fpdf import FPDF
 
 #--------------
 # PDF Generator
 #--------------
-def generate_full_pdf(
-    df,
-    stats_df,
-    anomalies,
-    events,
-    selected_mines,
-    fig,
-    out_dir="pdf_reports",
-):
+def render_matplotlib_plot(df_view, selected_mines, out_path="chart_matplotlib.png"):
+    """
+    Saving chart using matplotlib.
+    """
+    plt.figure(figsize=(10, 4))
+
+    for m in selected_mines:
+        plt.plot(df_view["Date"], df_view[m], label=m)
+
+    plt.xlabel("Date")
+    plt.ylabel("Output")
+    plt.title("Mining Output (matplotlib export)")
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+
+    return out_path
+
+
+def generate_full_pdf(df, stats_df, anomalies, events, selected_mines, fig, out_dir="pdf_reports"):
     """
     Creates a PDF report compliant with the task requirements.
     """
@@ -29,9 +42,8 @@ def generate_full_pdf(
     plot_path = os.path.join(out_dir, "chart.png")
 
     try:
-        png_bytes = fig.to_image(format="png", scale=2, engine="kaleido")
-        with open(plot_path, "wb") as f:
-            f.write(png_bytes)
+        plot_path = os.path.join(out_dir, "chart.png")
+        render_matplotlib_plot(df, selected_mines, out_path=plot_path)
     except Exception as e:
         raise RuntimeError(f"Failed to export Plotly figure to PNG: {e}")
 
