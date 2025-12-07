@@ -1,11 +1,49 @@
 function onEdit(e) {
-  const sheet = e.source.getSheetByName("Config");
-  if (!sheet) return;
+  try {
+    // if no event or range (safety)
+    if (!e || !e.range) return;
 
-  const edited = e.range.getA1Notation();
+    const ss = SpreadsheetApp.getActive();
+    const sheet = e.range.getSheet();
+    if (!sheet) return;
 
-  if (e.range.getRow() >= 3 && e.range.getRow() <= 16) {
-    regenData();
+    // only act on the Config sheet
+    const sheetName = sheet.getName();
+    if (sheetName !== "Config") return;
+
+    // the cell we care about: B7 (row 7, column 2)
+    const targetRow = 7;
+    const targetCol = 2;
+
+    const rRow = e.range.getRow();
+    const rCol = e.range.getColumn();
+    const numRows = e.range.getNumRows();
+    const numCols = e.range.getNumColumns();
+
+    // if the edited range *contains* B7, then trigger regenData()
+    const containsB7 =
+      (rRow <= targetRow && targetRow <= (rRow + numRows - 1)) &&
+      (rCol <= targetCol && targetCol <= (rCol + numCols - 1));
+
+    if (containsB7) {
+      // optional: you may want to debounce quick repeated edits — simple guard:
+      // lock to avoid re-entrancy if regenData takes long
+      const lock = LockService.getScriptLock();
+      const got = lock.tryLock(1000); // wait up to 1s
+      if (!got) {
+        // can't get lock — skip this auto-run to avoid overlapping executions
+        return;
+      }
+      try {
+        // call the generator
+        regenData();
+      } finally {
+        lock.releaseLock();
+      }
+    }
+  } catch (err) {
+    // safe logging, don't break user edits
+    console.error("onEdit handler error:", err);
   }
 }
 
@@ -62,6 +100,10 @@ function regenData() {
 
   // ---------------------
   // DISTRIBUTION SETTINGS
+  // B7 – type
+  // C7 – mean/min
+  // D7 – sd/max
+  // C6/D6 – dynamic labels
   // ---------------------
   const distribution = String(cfg.getRange("B7").getValue()).trim() || "Normal";
   let p1 = toNum(cfg.getRange("C7").getValue());
@@ -95,9 +137,10 @@ function regenData() {
     }
   } catch (err) {}
 
-  // -------------------------------
+  // ---------------------
   // TREND (EXPONENTIAL – realistic)
-  // -------------------------------
+  // B8 (% per day)
+  // ---------------------
   const dailyGrowth =
     (parseFloat(String(cfg.getRange("B8").getValue()).replace("%", "")) / 100) || 0;
 
@@ -118,9 +161,9 @@ function regenData() {
     6: dowMultipliers[5], // Saturday
   };
 
-  // ------
-  // EVENTS
-  // ------
+  // ---------------------
+  // EVENTS (B13:E16)
+  // ---------------------
   const events = [];
   const evRows = cfg.getRange("B13:E16").getValues();
   for (let r of evRows) {
@@ -133,9 +176,9 @@ function regenData() {
     events.push({ day, duration: dur, factor, probability: prob });
   }
 
-  // ----------------
+  // ---------------------
   // RANDOM FUNCTIONS
-  // ----------------
+  // ---------------------
   function randNormal(mean, sd) {
     const u = Math.random(), v = Math.random();
     return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
@@ -151,9 +194,9 @@ function regenData() {
       : randNormal(p1, p2);
   }
 
-  // -------------
+  // ---------------------
   // GENERATE DATA
-  // -------------
+  // ---------------------
   const header = ["Date"].concat(mines).concat(["Total"]);
   const result = [header];
 
@@ -209,18 +252,18 @@ function regenData() {
     result.push(row);
   }
 
-  // ------------
+  // ---------------------
   // WRITE OUTPUT
-  // ------------
+  // ---------------------
   let out = ss.getSheetByName("Generated Data");
   if (!out) out = ss.insertSheet("Generated Data");
 
   out.clearContents();
   out.getRange(1, 1, result.length, result[0].length).setValues(result);
 
-  // -------------
+  // ---------------------
   // REBUILD CHART
-  // -------------
+  // ---------------------
   try {
     cfg.getCharts().forEach(c => cfg.removeChart(c));
 
