@@ -32,7 +32,8 @@ weyland_yutani_mines/
 ├── requirements.txt
 ├── .gitignore                   # /secrets(API key for Google spreadsheet); pdf_reports(generated)
 ├── README.txt
-└── app.py                       # Main file used for orchestration of the app.
+├── spreadsheet_logic.js         # Logic used in the spreadsheet to generate data
+└── app.py                       # Main file used for orchestration of the app
 ```
 ___
 
