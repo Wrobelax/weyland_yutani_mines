@@ -80,7 +80,6 @@ def get_gspread_client():
         st.stop()
 
 
-@st.cache_data
 def load_data(sheet_name="Generated Data", json_key="secrets/service_account.json"):
     """
     Function used to load data from Google sheet.
