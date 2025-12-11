@@ -82,7 +82,7 @@ def get_gspread_client():
 
 def load_data(sheet_name="Generated Data", json_key="secrets/service_account.json"):
     """
-    Function used to load and clean data from Google Sheet.
+    Loads structured mine data only, ignoring randomizer/event columns.
     """
     client = get_gspread_client()
     try:
@@ -99,28 +99,30 @@ def load_data(sheet_name="Generated Data", json_key="secrets/service_account.jso
     headers = raw_values[0]
     rows = raw_values[1:]
 
-    clean_headers = []
-    seen = set()
-    for i, h in enumerate(headers):
-        h_clean = h.strip() if h.strip() != "" else f"Unnamed_{i}"
-        while h_clean in seen:
-            h_clean += "_dup"
-        clean_headers.append(h_clean)
-        seen.add(h_clean)
+    clean_rows = []
+    for row in rows:
+        if not any(cell.strip() for cell in row):
+            break
+        clean_rows.append(row)
 
-    df = pd.DataFrame(rows, columns=clean_headers)
+    valid_cols = []
+    for i, h in enumerate(headers):
+        if h.strip() == "" or "Randomizer" in h or "Event" in h or h.startswith("Unnamed"):
+            break
+        valid_cols.append(i)
+
+    clean_headers = [headers[i] for i in valid_cols]
+    trimmed_rows = [row[:len(valid_cols)] for row in clean_rows]
+
+    df = pd.DataFrame(trimmed_rows, columns=clean_headers)
 
     if "Date" in df.columns:
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
 
-
     for col in df.columns:
         if col == "Date":
             continue
-        try:
-            df[col] = pd.to_numeric([v if v != "" else None for v in df[col]], errors="coerce")
-        except Exception:
-            pass
+        df[col] = pd.to_numeric(df[col].replace("", pd.NA), errors="coerce")
 
     return df
 
