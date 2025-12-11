@@ -82,7 +82,7 @@ def get_gspread_client():
 
 def load_data(sheet_name="Generated Data", json_key="secrets/service_account.json"):
     """
-    Function used to load data from Google Sheet and clean it.
+    Function used to load and clean data from Google Sheet.
     """
     client = get_gspread_client()
     try:
@@ -99,20 +99,28 @@ def load_data(sheet_name="Generated Data", json_key="secrets/service_account.jso
     headers = raw_values[0]
     rows = raw_values[1:]
 
-    df = pd.DataFrame(rows, columns=headers)
+    clean_headers = []
+    seen = set()
+    for i, h in enumerate(headers):
+        h_clean = h.strip() if h.strip() != "" else f"Unnamed_{i}"
+        while h_clean in seen:
+            h_clean += "_dup"
+        clean_headers.append(h_clean)
+        seen.add(h_clean)
 
-    # Convert Date
+    df = pd.DataFrame(rows, columns=clean_headers)
+
     if "Date" in df.columns:
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
 
-    # Convert numeric columns safely
+
     for col in df.columns:
         if col == "Date":
             continue
         try:
             df[col] = pd.to_numeric([v if v != "" else None for v in df[col]], errors="coerce")
         except Exception:
-            pass  # silently skip broken column
+            pass
 
     return df
 
