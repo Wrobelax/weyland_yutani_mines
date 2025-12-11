@@ -80,7 +80,7 @@ def get_gspread_client():
         st.stop()
 
 
-def load_data(sheet_name="Generated Data", json_key="secrets/service_account.json"):
+def load_data(sheet_name="Generated Data"):
     """
     Function used to load data from Google sheet.
     """
@@ -91,10 +91,27 @@ def load_data(sheet_name="Generated Data", json_key="secrets/service_account.jso
         st.error(f"Cannot open worksheet '{sheet_name}': {e}")
         st.stop()
 
-    df = pd.DataFrame(sheet.get_all_records())
-    df["Date"] = pd.to_datetime(df.get("Date"), errors="coerce")
+    raw_values = sheet.get_values()
+    if not raw_values or len(raw_values) < 1:
+        return pd.DataFrame(columns=["Date"])
+
+    headers = raw_values[0]
+    rows = raw_values[1:]
+
+    df = pd.DataFrame(rows, columns=headers)
+
+    if "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    else:
+        df["Date"] = pd.NaT
+
+    for col in df.columns:
+        if col == "Date":
+            continue
+        df[col] = pd.to_numeric(df[col].replace("", pd.NA), errors="coerce")
 
     return df
+
 
 
 #------------

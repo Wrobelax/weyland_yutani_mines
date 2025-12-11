@@ -11,18 +11,23 @@ from scipy import stats as sp_stats
 #---------------------
 def calculate_stats(df):
     """
-    Calculating statistics used on dashboard. Total counted separately
+    Calculating statistics used on dashboard. Total counted separately.
     """
     mine_cols = [
         col for col in df.columns
-        if col not in ["Date"] and pd.api.types.is_numeric_dtype(df[col])
+        if col not in ["Date"] and "Randomizer" not in col and pd.api.types.is_numeric_dtype(df[col])
     ]
+
+    if "Total" in df.columns and "Total" not in mine_cols:
+        mine_cols.append("Total")
 
     stats = pd.DataFrame(index=mine_cols)
     stats["mean"] = df[mine_cols].mean()
     stats["std"] = df[mine_cols].std()
     stats["median"] = df[mine_cols].median()
     stats["IQR"] = df[mine_cols].quantile(0.75) - df[mine_cols].quantile(0.25)
+
+    stats = stats.dropna(axis=0, how="all")
 
     return stats
 
@@ -46,8 +51,7 @@ def detect_anomalies(df,
     """
     mine_cols = [
         col for col in df.columns
-        if col not in ["Date"]
-        and pd.api.types.is_numeric_dtype(df[col])
+        if col not in ["Date"] and "Randomizer" not in col and pd.api.types.is_numeric_dtype(df[col])
     ]
 
     anomalies = pd.DataFrame(False, index=df.index, columns=mine_cols)

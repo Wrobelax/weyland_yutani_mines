@@ -48,11 +48,14 @@ iqr_factor = st.sidebar.slider("IQR factor", 1.0, 3.0, 1.5, step=0.1)
 
 all_mines = [
     col for col in data.columns
-    if col not in ["Date"]
-    and pd.api.types.is_numeric_dtype(data[col])
+    if col not in ["Date"] and "Randomizer" not in col and pd.api.types.is_numeric_dtype(data[col])
 ]
 
 selected_mines = st.sidebar.multiselect("Select mines", all_mines, default=[all_mines[0]])
+if not selected_mines:
+    st.warning("Select at least one mine to proceed.")
+    st.stop()
+
 chart_type = st.sidebar.selectbox("Chart type", ["line", "bar", "stacked"])
 show_trend = st.sidebar.checkbox("Show polynomial trendline (single mine only)", value=True)
 trend_degree = st.sidebar.selectbox("Trendline degree (1-4)", [1,2,3,4], index=0)
@@ -86,8 +89,10 @@ st.plotly_chart(fig, width="stretch")
 #Show statistics and anomalies summary
 #-------------------------------------
 st.subheader("Statistics (per mine)")
-st.dataframe(stats.loc[selected_mines])
-st.dataframe(stats.loc[selected_mines + ["Total"]])
+display_list = selected_mines.copy()
+if "Total" in stats.index and "Total" not in display_list:
+    display_list = display_list + ["Total"]
+st.dataframe(stats.loc[display_list])
 
 st.subheader("Anomalies summary (count per mine in selected date range)")
 
@@ -122,7 +127,9 @@ if st.button("Generate PDF Report"):
         anomalies=anomalies,
         events=events_from_sheet,
         selected_mines=selected_mines,
-        fig=fig
+        fig=fig,
+        chart_type=chart_type,
+        trend_degree=trend_degree
     )
     with open(file_path, "rb") as f:
         st.download_button(
