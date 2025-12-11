@@ -127,7 +127,6 @@ if st.button("Generate PDF Report"):
         anomalies=anomalies,
         events=events_from_sheet,
         selected_mines=selected_mines,
-        fig=fig,
         chart_type=chart_type,
         trend_degree=trend_degree
     )
